@@ -1,0 +1,50 @@
+
+name: Build MP Camera APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Extrair projeto
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          unzip -q mp-camera.zip -d project
+
+      - name: Baixar modelo MediaPipe
+        run: |
+          mkdir -p project/app/src/main/assets
+          curl -fL \
+            https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task \
+            -o project/app/src/main/assets/hand_landmarker.task
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Compilar APK
+        run: |
+          cd project
+          gradle assembleDebug --stacktrace
+
+      - name: Disponibilizar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MP-Camera-APK
+          path: project/app/build/outputs/apk/debug/*.apk
